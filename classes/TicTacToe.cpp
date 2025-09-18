@@ -1,5 +1,5 @@
 #include "TicTacToe.h"
-
+int checkForAIWinner(const std::string &state);
 // -----------------------------------------------------------------------------
 // TicTacToe.cpp
 // -----------------------------------------------------------------------------
@@ -69,6 +69,12 @@ void TicTacToe::setUpBoard()
             _grid[i][j].initHolder(vec2, "square.png", i, j);
         }
     }
+
+    if(gameHasAI())
+    {
+        setAIPlayer(AI_PLAYER);
+    }
+
     // finally we should call startGame to get everything going
     startGame();
 }
@@ -140,9 +146,9 @@ Player* TicTacToe::ownerAt(int index ) const
     // x = index % 3 
     int x = index%3, y = index/3;
     // if there is no bit at that location (in _grid) return nullptr
-    if(!_grid[x][y].bit()) return nullptr;
+    if(!_grid[y][x].bit()) return nullptr;
     // otherwise return the owner of the bit at that location using getOwner()
-    return _grid[x][y].bit()->getOwner();
+    return _grid[y][x].bit()->getOwner();
 }
 
 Player* TicTacToe::checkForWinner()
@@ -205,10 +211,11 @@ bool TicTacToe::checkForDraw()
     // is the board full with no winner?
     // if any square is empty, return false
     // otherwise return true
+    if(checkForWinner() || checkForAIWinner(stateString())) return false;
     for(int i=0; i<9; ++i)
     {
         int x = i%3, y = i/3;
-        if(_grid[x][y].empty())
+        if(_grid[y][x].empty())
             return false;
     }
     return true;
@@ -243,19 +250,17 @@ std::string TicTacToe::stateString() const // returns current state of board as 
     // finally, return the constructed string
 
     // loop through grid
-    std::string stateString = "";
+    std::string stateString = "000000000";
     for(int i=0; i<9; ++i)
     {
+        // get coordinates
         int x = i%3, y = i/3;
-        Bit *currentBit = _grid[x][y].bit();
-        if(currentBit)
+        
+        Bit *currentBit = _grid[y][x].bit();
+        if(currentBit) //if currentBit exists
         {
             int currentOwnerIndex = currentBit->getOwner()->playerNumber() + 1;
-            stateString += currentOwnerIndex + '0';
-        }
-        else
-        {
-            stateString += '0';
+            stateString[i] = currentOwnerIndex + '0';
         }
     }
     // std::cout << stateString << std::endl;
@@ -288,11 +293,10 @@ void TicTacToe::setStateString(const std::string &s)
     // loop through the 3x3 array and set each square accordingly
     // the string should always be valid, so you don't need to check its length or contents
     // but you can assume it will always be 9 characters long and only contain '0', '1', or '2'
-    std::cout << "I've been called!" << std::endl;
     for(int i=0; i<9; ++i)
     {
         int x = i%3, y=i/3;
-        Square *currentSquare = &_grid[x][y];
+        Square *currentSquare = &_grid[y][x];
         char currentChar = s[i];
         if(currentChar == '0')
         {
@@ -301,7 +305,9 @@ void TicTacToe::setStateString(const std::string &s)
         else if(currentChar == '1' || currentChar == '2')
         {
             int playerIndex = currentChar - '0' - 1;
-            std::cout << playerIndex << std::endl;
+
+            // std::cout << playerIndex << std::endl;
+
             Bit *newBit = PieceForPlayer(playerIndex);
             newBit->setPosition(currentSquare->getPosition());
             currentSquare->setBit(newBit);
@@ -316,5 +322,98 @@ void TicTacToe::setStateString(const std::string &s)
 void TicTacToe::updateAI() 
 {
     // we will implement the AI in the next assignment!
+
+    // In-Class implementation:
+    std::string state = stateString();
+    int bestMove = -10000;
+    int bestSquare = -1;
+    _lookedAt = 0;
+    for(int i=0; i<9; ++i)
+    {
+        if(state[i] == '0')
+        {
+            state[i] = '2';
+            int aiMove = -negamax(state, 0, HUMAN_PLAYER);
+            state[i] = '0';
+            if(aiMove > bestMove)
+            {
+                bestMove = aiMove;
+                bestSquare = i;
+            }
+        }
+    }
+
+    if(bestSquare != -1)
+    {
+        actionForEmptyHolder(&_grid[bestSquare/3][bestSquare%3]);
+        endTurn();
+    }
 }
 
+bool isAIBoardFull(const std::string &state)
+{
+    // faster version of check for draw
+    return (state.find('0') == std::string::npos);
+}
+
+int checkForAIWinner(const std::string &state)
+{
+    int winningTriples[8][3] = {
+        {0, 1, 2},
+        {3, 4, 5},
+        {6, 7, 8},
+        {0, 3, 6},
+        {1, 4, 7},
+        {2, 5, 8},
+        {0, 4, 8},
+        {2, 4, 6}
+    };
+    for(int i=0; i<8; ++i)
+    {
+        const int *triple = winningTriples[i];
+        char player = state[triple[0]];
+        if(player != '0' && player == state[triple[1]] && player == state[triple[2]])
+        {
+            return 10;
+        }
+        return 0;
+    }
+}
+/*
+function negamax(node, depth, color) is
+    if depth = 0 or node is a terminal node then
+        return color × the heuristic value of node
+    value := −∞
+    for each child of node do
+        value := max(value, −negamax(child, depth − 1, −color))
+    return value
+*/
+int TicTacToe::negamax(std::string &state, int depth, int playerColor)
+{
+    int score = checkForAIWinner(state);
+    _lookedAt++;
+    if(score)
+    {
+        // a winning state here is a loss for the recursive parent
+        return -score;
+    }
+
+    if(isAIBoardFull(state))
+    {
+        // this is because if it's full, it's a draw?
+        return 0;
+    }
+
+    int bestVal = -10000;
+    for(int i=0; i<9; ++i)
+    {
+        if(state[i] == '0')
+        {
+            state[i] = playerColor == HUMAN_PLAYER ? '1' : '2'; // if it's a human player, set 1, if AI, set 2
+            bestVal = std::max(bestVal, -negamax(state, depth+1, -playerColor));
+            state[i] = '0';
+        }
+    }
+
+    return bestVal;
+}

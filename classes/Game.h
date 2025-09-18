@@ -8,6 +8,7 @@
 #include "Turn.h"
 #include "Bit.h"
 #include "BitHolder.h"
+#include "Logger/Log.h"
 
 class GameTable;
 

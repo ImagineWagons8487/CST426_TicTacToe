@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "imgui/imgui.h"
 #include "classes/TicTacToe.h"
+#include "classes/Logger/Log.h"
 
 namespace ClassGame {
         //
@@ -16,6 +17,9 @@ namespace ClassGame {
         //
         void GameStartUp() 
         {
+            //Initialize Logger
+            Log::initialize();
+
             game = new TicTacToe();
             game->setUpBoard();
         }
