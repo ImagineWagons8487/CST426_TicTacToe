@@ -23,8 +23,6 @@ Originally, I was handling it according to the instructions, by starting with an
 
 So after talking with the professor, I intialized a string with all zeros like this: `"000000000"` and just edited by index, which is more efficient.
 
-Right after was the next class, in which we implemented an AI for the game using the negamax algorithm.
-
 ## Side Quest 2: AI extra credit!!!
 
 As my final feature so far, I quickly implemented the ability to toggle playing against the AI with a button.
@@ -43,3 +41,8 @@ else
         game->vsAI = true;
 }
 ```
+
+## Assignment 2: Adding Negamax
+
+Adding the algorithm was done in class with the professor showing us how to do it based off of the wikipedia page for negamax. 
+

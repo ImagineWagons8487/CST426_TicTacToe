@@ -1,5 +1,4 @@
 #include "TicTacToe.h"
-int checkForAIWinner(const std::string &state);
 // -----------------------------------------------------------------------------
 // TicTacToe.cpp
 // -----------------------------------------------------------------------------
@@ -25,7 +24,7 @@ int checkForAIWinner(const std::string &state);
 // -----------------------------------------------------------------------------
 
 const int AI_PLAYER   = 1;      // index of the AI player (O)
-const int HUMAN_PLAYER= 0;      // index of the human player (X)
+const int HUMAN_PLAYER= -1;      // index of the human player (X)
 
 TicTacToe::TicTacToe()
 {
@@ -211,7 +210,7 @@ bool TicTacToe::checkForDraw()
     // is the board full with no winner?
     // if any square is empty, return false
     // otherwise return true
-    if(checkForWinner() || checkForAIWinner(stateString())) return false;
+    // if(checkForWinner() || checkForAIWinner(stateString()), ) return false;
     for(int i=0; i<9; ++i)
     {
         int x = i%3, y = i/3;
@@ -321,23 +320,31 @@ void TicTacToe::setStateString(const std::string &s)
 //
 void TicTacToe::updateAI() 
 {
-    // we will implement the AI in the next assignment!
 
     // In-Class implementation:
     std::string state = stateString();
     int bestMove = -10000;
     int bestSquare = -1;
     _lookedAt = 0;
+
+    // initialize alpha and beta to negative "infinity" and positive "infinity" respectively
+    int alpha = -10000;
+    int beta = 10000;
+
     for(int i=0; i<9; ++i)
     {
         if(state[i] == '0')
         {
             state[i] = '2';
-            int aiMove = -negamax(state, 0, HUMAN_PLAYER);
+            int aiMove = -negamax(state, 0, alpha, beta, HUMAN_PLAYER);
             state[i] = '0';
+            // std::cout << "AIMOVE: " << aiMove << std::endl;
             if(aiMove > bestMove)
             {
+                // std::cout << i << std::endl;
+                
                 bestMove = aiMove;
+                // std::cout << "AIMOVE: " << aiMove << " bestMove: " << bestMove << std::endl;
                 bestSquare = i;
             }
         }
@@ -356,7 +363,7 @@ bool isAIBoardFull(const std::string &state)
     return (state.find('0') == std::string::npos);
 }
 
-int checkForAIWinner(const std::string &state)
+int TicTacToe::checkForAIWinner(const std::string &state, int target)
 {
     int winningTriples[8][3] = {
         {0, 1, 2},
@@ -371,13 +378,16 @@ int checkForAIWinner(const std::string &state)
     for(int i=0; i<8; ++i)
     {
         const int *triple = winningTriples[i];
-        char player = state[triple[0]];
+        int currentVal = triple[0];
+        char player = state[currentVal];
+        // check if the index of the first value of the current triple has the right value
+        // does char player casted to int not equal target? if true, move on to next triple
         if(player != '0' && player == state[triple[1]] && player == state[triple[2]])
         {
             return 10;
         }
-        return 0;
     }
+    return 0;
 }
 /*
 function negamax(node, depth, color) is
@@ -388,9 +398,10 @@ function negamax(node, depth, color) is
         value := max(value, −negamax(child, depth − 1, −color))
     return value
 */
-int TicTacToe::negamax(std::string &state, int depth, int playerColor)
+int TicTacToe::negamax(std::string &state, int depth, int alpha, int beta, int playerColor)
 {
-    int score = checkForAIWinner(state);
+    int score = checkForAIWinner(state, playerColor);
+    // std::cout << "Depth: " << depth << " Score: " << score << std::endl;
     _lookedAt++;
     if(score)
     {
@@ -410,10 +421,34 @@ int TicTacToe::negamax(std::string &state, int depth, int playerColor)
         if(state[i] == '0')
         {
             state[i] = playerColor == HUMAN_PLAYER ? '1' : '2'; // if it's a human player, set 1, if AI, set 2
-            bestVal = std::max(bestVal, -negamax(state, depth+1, -playerColor));
+            bestVal = std::max(bestVal, -negamax(state, depth+1, -beta, -alpha, -playerColor));
             state[i] = '0';
+            alpha = std::max(alpha, bestVal);
+            if(alpha > beta)
+            {
+                break;
+            }
         }
     }
 
     return bestVal;
 }
+
+/*
+evaluation(boardstate)
+{
+    int b[6][7] = {35, 45, 5,35, 35, 3}
+    value =0
+    for piece on biard
+        if red value + b[x][y]
+        else value - b[x][y]
+    end
+    return value
+}
+
+func negamax(depth)
+{
+    if depth = maxDepth
+        return -evaluation(board)
+}
+*/
